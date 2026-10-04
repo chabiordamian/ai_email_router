@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 
 def _positive_int(name: str, default: int) -> int:
@@ -11,6 +12,7 @@ def _positive_int(name: str, default: int) -> int:
 
 @dataclass(frozen=True, slots=True)
 class Settings:
+    departments_config_path: Path
     ollama_base_url: str
     ollama_model: str
     ollama_timeout_seconds: int
@@ -22,6 +24,9 @@ class Settings:
     @classmethod
     def from_environment(cls) -> Settings:
         return cls(
+            departments_config_path=Path(
+                os.getenv("DEPARTMENTS_CONFIG_PATH", "config/departments.yaml")
+            ),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://ollama:11434"),
             ollama_model=os.getenv("OLLAMA_MODEL", "qwen3:1.7b"),
             ollama_timeout_seconds=_positive_int("OLLAMA_TIMEOUT_SECONDS", 120),

@@ -1,0 +1,57 @@
+departments:
+  - id: human-resources
+    email: human-resources@example.com
+    description: >-
+      Recruitment, onboarding, employee development, benefits, workplace
+      relations and HR policies.
+    examples:
+      - I would like to apply for an open position.
+      - What employee benefits are available?
+      - Chcę zgłosić problem dotyczący relacji w zespole.
+      - Jak wygląda proces onboardingu nowego pracownika?
+
+  - id: help-desk
+    email: help-desk@example.com
+    description: >-
+      First-line support for an employee's everyday account, application and
+      device issues, including instructions and password resets.
+    examples:
+      - I forgot my password and cannot sign in.
+      - How do I configure email on my phone?
+      - Mój laptop nie uruchamia się.
+      - Jak podłączyć drukarkę w biurze?
+
+  - id: it
+    email: it@example.com
+    description: >-
+      Company infrastructure, networks, VPN, servers, security incidents and
+      failures affecting shared systems.
+    examples:
+      - The production server is unavailable.
+      - Our company VPN is down for everyone.
+      - Nie działa firmowa sieć w całym biurze.
+      - Podejrzewam incydent bezpieczeństwa w systemie.
+
+  - id: kadry
+    email: kadry@example.com
+    description: >-
+      Leave, payroll, attendance, employment contracts, certificates and
+      employee record administration.
+    examples:
+      - Chcę zgłosić urlop na jutro.
+      - Potrzebuję zaświadczenia o zatrudnieniu.
+      - My salary statement contains an error.
+      - I need to update my personal details in the employee records.
+
+  - id: other
+    email: other@example.com
+    description: >-
+      Requests unrelated to the listed departments or messages without enough
+      information to choose a department.
+    examples:
+      - I have a sales partnership proposal.
+      - Gdzie mogę zamówić catering na spotkanie?
+      - Dzień dobry, mam pytanie.
+      - Please contact me when possible.
+
+fallback_department: other
