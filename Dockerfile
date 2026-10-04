@@ -13,6 +13,7 @@ RUN groupadd --system app \
     && chown app:app /app
 
 COPY --chown=app:app app ./app
+COPY --chown=app:app config ./config
 
 USER app
 

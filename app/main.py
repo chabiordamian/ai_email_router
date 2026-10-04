@@ -6,17 +6,20 @@ from fastapi.responses import JSONResponse
 from ollama import AsyncClient
 
 from app.health import readiness_checks
+from app.routing_config import load_routing_config
 from app.settings import Settings
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = Settings.from_environment()
+    routing_config = load_routing_config(settings.departments_config_path)
     ollama_client = AsyncClient(
         host=settings.ollama_base_url,
         timeout=settings.ollama_timeout_seconds,
     )
     application.state.settings = settings
+    application.state.routing_config = routing_config
     application.state.ollama_client = ollama_client
     try:
         yield

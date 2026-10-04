@@ -9,3 +9,8 @@ python_version = "3.14"
 strict = true
 untyped_calls_exclude = ["ollama"]
 warn_unreachable = true
+
+[tool.pytest.ini_options]
+addopts = ["--strict-config", "--strict-markers"]
+pythonpath = ["."]
+testpaths = ["tests"]
