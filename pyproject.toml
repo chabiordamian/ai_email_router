@@ -1,0 +1,11 @@
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["ASYNC", "B", "E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+untyped_calls_exclude = ["ollama"]
+warn_unreachable = true

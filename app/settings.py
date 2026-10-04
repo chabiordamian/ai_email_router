@@ -20,15 +20,11 @@ class Settings:
     email_from: str
 
     @classmethod
-    def from_environment(cls) -> "Settings":
+    def from_environment(cls) -> Settings:
         return cls(
-            ollama_base_url=os.getenv(
-                "OLLAMA_BASE_URL", "http://ollama:11434"
-            ),
+            ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://ollama:11434"),
             ollama_model=os.getenv("OLLAMA_MODEL", "qwen3:1.7b"),
-            ollama_timeout_seconds=_positive_int(
-                "OLLAMA_TIMEOUT_SECONDS", 120
-            ),
+            ollama_timeout_seconds=_positive_int("OLLAMA_TIMEOUT_SECONDS", 120),
             smtp_host=os.getenv("SMTP_HOST", "mailpit"),
             smtp_port=_positive_int("SMTP_PORT", 1025),
             smtp_timeout_seconds=_positive_int("SMTP_TIMEOUT_SECONDS", 10),
