@@ -50,31 +50,13 @@ class RoutingAgent:
             messages=messages,
             tools=[self._tool_schema()],
             think=False,
+            options={"temperature": 0},
         )
         tool_call = self._single_tool_call(decision.message.tool_calls)
         department = self._department_argument(tool_call.function.arguments)
         tool_result = await email_tool.send_email(department)
 
-        messages.extend(
-            [
-                decision.message,
-                Message(
-                    role="tool",
-                    tool_name=TOOL_NAME,
-                    content=tool_result,
-                ),
-            ]
-        )
-        completion = await self._client.chat(
-            model=self._settings.ollama_model,
-            messages=messages,
-            think=False,
-        )
-        response = (completion.message.content or "").strip()
-        if not response:
-            raise AgentResponseError("Model returned an empty final response")
-
-        return AgentResult(department=department, response=response)
+        return AgentResult(department=department, response=tool_result)
 
     def _system_prompt(self) -> str:
         department_lines = []

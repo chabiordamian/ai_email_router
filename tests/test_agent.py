@@ -46,12 +46,9 @@ def tool_call(department: str) -> Message.ToolCall:
 
 def test_routes_message_by_calling_email_tool() -> None:
     client = AsyncMock(spec=AsyncClient)
-    client.chat.side_effect = [
-        ChatResponse(message=Message(role="assistant", tool_calls=[tool_call("it")])),
-        ChatResponse(
-            message=Message(role="assistant", content="The message was sent to IT.")
-        ),
-    ]
+    client.chat.return_value = ChatResponse(
+        message=Message(role="assistant", tool_calls=[tool_call("it")])
+    )
 
     with patch("app.agent.EmailTool.send_email", new_callable=AsyncMock) as send_email:
         send_email.return_value = "Message sent to it"
@@ -64,21 +61,16 @@ def test_routes_message_by_calling_email_tool() -> None:
 
     send_email.assert_awaited_once_with("it")
     assert result.department == "it"
-    assert result.response == "The message was sent to IT."
+    assert result.response == "Message sent to it"
 
-    decision_call, completion_call = client.chat.await_args_list
+    client.chat.assert_awaited_once()
+    decision_call = client.chat.await_args
     tool_schema = decision_call.kwargs["tools"][0]
     assert tool_schema["function"]["parameters"]["properties"]["department"][
         "enum"
     ] == ["human-resources", "help-desk", "it", "kadry", "other"]
     assert decision_call.kwargs["think"] is False
-    assert "tools" not in completion_call.kwargs
-    assert completion_call.kwargs["think"] is False
-    assert completion_call.kwargs["messages"][-1] == Message(
-        role="tool",
-        tool_name="send_email",
-        content="Message sent to it",
-    )
+    assert decision_call.kwargs["options"] == {"temperature": 0}
 
 
 @pytest.mark.parametrize("calls", [None, [], [tool_call("it"), tool_call("other")]])

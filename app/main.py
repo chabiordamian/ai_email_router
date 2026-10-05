@@ -2,9 +2,11 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
+import httpx
+from aiosmtplib.errors import SMTPException
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from ollama import AsyncClient
+from ollama import AsyncClient, ResponseError
 from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints
 
 from app.agent import AgentResponseError, RoutingAgent
@@ -12,7 +14,15 @@ from app.health import readiness_checks
 from app.routing_config import load_routing_config
 from app.settings import Settings
 
-MessageText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+MAX_MESSAGE_LENGTH = 10_000
+MessageText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=MAX_MESSAGE_LENGTH,
+    ),
+]
 
 
 class RoutingRequest(BaseModel):
@@ -93,6 +103,21 @@ async def route_message(
         raise HTTPException(
             status_code=502,
             detail="The model returned an invalid routing decision",
+        ) from error
+    except httpx.TimeoutException as error:
+        raise HTTPException(
+            status_code=504,
+            detail="The language model timed out",
+        ) from error
+    except (httpx.RequestError, ResponseError) as error:
+        raise HTTPException(
+            status_code=503,
+            detail="The language model is unavailable",
+        ) from error
+    except (SMTPException, OSError) as error:
+        raise HTTPException(
+            status_code=503,
+            detail="The email service is unavailable",
         ) from error
 
     return RoutingResponse(
