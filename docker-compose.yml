@@ -32,6 +32,8 @@ services:
 
   ollama:
     image: ollama/ollama:0.34.2
+    environment:
+      OLLAMA_KEEP_ALIVE: -1
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
@@ -46,7 +48,12 @@ services:
     image: ollama/ollama:0.34.2
     environment:
       OLLAMA_HOST: http://ollama:11434
-    command: ["pull", "${OLLAMA_MODEL:-qwen3:1.7b}"]
+    command:
+      - run
+      - ${OLLAMA_MODEL:-qwen3:1.7b}
+      - Reply only with OK.
+      - --think=false
+      - --keepalive=-1s
     depends_on:
       ollama:
         condition: service_healthy
