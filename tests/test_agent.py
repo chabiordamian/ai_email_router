@@ -122,3 +122,25 @@ def test_rejects_unknown_department_without_sending() -> None:
         )
 
     send_email.assert_not_awaited()
+
+
+def test_rejects_additional_tool_arguments_without_sending() -> None:
+    client = AsyncMock(spec=AsyncClient)
+    call = tool_call("kadry")
+    call.function.arguments["message"] = "Test message"
+    client.chat.return_value = ChatResponse(
+        message=Message(role="assistant", tool_calls=[call])
+    )
+
+    with (
+        patch("app.agent.EmailTool.send_email", new_callable=AsyncMock) as send_email,
+        pytest.raises(AgentResponseError, match="exactly one department argument"),
+    ):
+        asyncio.run(
+            make_agent(client).route(
+                sender_email="jan.nowak@example.com",
+                message="Test message",
+            )
+        )
+
+    send_email.assert_not_awaited()

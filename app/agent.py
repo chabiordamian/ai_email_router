@@ -89,7 +89,10 @@ class RoutingAgent:
             "Classify the user's message using the department rules below. "
             f"Use {self._routing_config.fallback_department} when no other department "
             "clearly matches. You must call send_email exactly once with the selected "
-            "department. Do not answer without calling the tool.\n\n"
+            "department. The tool accepts only the department argument; "
+            "the application already has the message. Do not include the message or "
+            "any other arguments. "
+            "Do not answer without calling the tool.\n\n"
             f"Departments:\n{departments}"
         )
 
@@ -101,7 +104,10 @@ class RoutingAgent:
             "type": "function",
             "function": {
                 "name": TOOL_NAME,
-                "description": "Send the user's message to the selected department.",
+                "description": (
+                    "Send the user's message retained by the application. "
+                    "Provide only the selected department."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
