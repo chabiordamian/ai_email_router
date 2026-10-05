@@ -1,13 +1,30 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from ollama import AsyncClient
+from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints
 
+from app.agent import AgentResponseError, RoutingAgent
 from app.health import readiness_checks
 from app.routing_config import load_routing_config
 from app.settings import Settings
+
+MessageText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class RoutingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+    message: MessageText
+
+
+class RoutingResponse(BaseModel):
+    department: str
+    response: str
 
 
 @asynccontextmanager
@@ -21,6 +38,11 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.settings = settings
     application.state.routing_config = routing_config
     application.state.ollama_client = ollama_client
+    application.state.routing_agent = RoutingAgent(
+        client=ollama_client,
+        routing_config=routing_config,
+        settings=settings,
+    )
     try:
         yield
     finally:
@@ -50,4 +72,30 @@ async def health(request: Request) -> JSONResponse:
             "status": "ok" if is_ready else "unavailable",
             "checks": checks,
         },
+    )
+
+
+@app.post(
+    "/api/v1/messages",
+    response_model=RoutingResponse,
+    tags=["Messages"],
+)
+async def route_message(
+    payload: RoutingRequest,
+    request: Request,
+) -> RoutingResponse:
+    try:
+        result = await request.app.state.routing_agent.route(
+            sender_email=str(payload.email),
+            message=payload.message,
+        )
+    except AgentResponseError as error:
+        raise HTTPException(
+            status_code=502,
+            detail="The model returned an invalid routing decision",
+        ) from error
+
+    return RoutingResponse(
+        department=result.department,
+        response=result.response,
     )
