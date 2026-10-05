@@ -2,12 +2,22 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from email_validator import EmailNotValidError, validate_email
+
 
 def _positive_int(name: str, default: int) -> int:
     value = int(os.getenv(name, str(default)))
     if value <= 0:
         raise ValueError(f"{name} must be greater than zero")
     return value
+
+
+def _email_address(name: str, default: str) -> str:
+    value = os.getenv(name, default)
+    try:
+        return validate_email(value, check_deliverability=False).normalized
+    except EmailNotValidError as error:
+        raise ValueError(f"{name} must be a valid email address") from error
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,5 +43,5 @@ class Settings:
             smtp_host=os.getenv("SMTP_HOST", "mailpit"),
             smtp_port=_positive_int("SMTP_PORT", 1025),
             smtp_timeout_seconds=_positive_int("SMTP_TIMEOUT_SECONDS", 10),
-            email_from=os.getenv("EMAIL_FROM", "ai-router@example.com"),
+            email_from=_email_address("EMAIL_FROM", "ai-router@example.com"),
         )

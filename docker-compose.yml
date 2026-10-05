@@ -2,6 +2,7 @@ name: ai-email-router
 
 services:
   api:
+    image: ai-email-router-api
     build:
       context: .
     environment:
@@ -29,6 +30,14 @@ services:
       retries: 12
       start_period: 10s
     restart: unless-stopped
+
+  ready:
+    image: ai-email-router-api
+    command: ["true"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
 
   ollama:
     image: ollama/ollama:0.34.2

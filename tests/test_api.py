@@ -1,9 +1,12 @@
 from unittest.mock import AsyncMock, patch
 
+import httpx
+import pytest
+from aiosmtplib.errors import SMTPException
 from fastapi.testclient import TestClient
 
 from app.agent import AgentResponseError, AgentResult
-from app.main import app
+from app.main import MAX_MESSAGE_LENGTH, app
 
 
 def test_routes_valid_message() -> None:
@@ -50,6 +53,24 @@ def test_rejects_invalid_request_before_calling_agent() -> None:
     route.assert_not_awaited()
 
 
+def test_rejects_message_over_length_limit() -> None:
+    with patch(
+        "app.main.RoutingAgent.route",
+        new_callable=AsyncMock,
+    ) as route:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/v1/messages",
+                json={
+                    "email": "jan.nowak@example.com",
+                    "message": "x" * (MAX_MESSAGE_LENGTH + 1),
+                },
+            )
+
+    assert response.status_code == 422
+    route.assert_not_awaited()
+
+
 def test_returns_bad_gateway_for_invalid_model_decision() -> None:
     with patch(
         "app.main.RoutingAgent.route",
@@ -69,3 +90,63 @@ def test_returns_bad_gateway_for_invalid_model_decision() -> None:
     assert response.json() == {
         "detail": "The model returned an invalid routing decision"
     }
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (httpx.ReadTimeout("timed out"), 504, "The language model timed out"),
+        (
+            httpx.ConnectError("connection failed"),
+            503,
+            "The language model is unavailable",
+        ),
+        (SMTPException("SMTP failed"), 503, "The email service is unavailable"),
+    ],
+)
+def test_maps_dependency_failures_to_http_statuses(
+    error: Exception,
+    status_code: int,
+    detail: str,
+) -> None:
+    with patch(
+        "app.main.RoutingAgent.route",
+        new_callable=AsyncMock,
+    ) as route:
+        route.side_effect = error
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/v1/messages",
+                json={
+                    "email": "jan.nowak@example.com",
+                    "message": "Test message",
+                },
+            )
+
+    assert response.status_code == status_code
+    assert response.json() == {"detail": detail}
+
+
+@pytest.mark.parametrize(
+    ("checks", "status_code", "status"),
+    [
+        ({"ollama": "ok", "smtp": "ok"}, 200, "ok"),
+        ({"ollama": "unavailable", "smtp": "ok"}, 503, "unavailable"),
+        ({"ollama": "ok", "smtp": "unavailable"}, 503, "unavailable"),
+    ],
+)
+def test_health_reflects_dependency_status(
+    checks: dict[str, str],
+    status_code: int,
+    status: str,
+) -> None:
+    with patch(
+        "app.main.readiness_checks",
+        new_callable=AsyncMock,
+        return_value=checks,
+    ):
+        with TestClient(app) as client:
+            response = client.get("/health")
+
+    assert response.status_code == status_code
+    assert response.json() == {"status": status, "checks": checks}
